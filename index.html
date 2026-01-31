@@ -6,181 +6,228 @@
     <title>HTML Viewer</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: sans-serif; margin: 0; background: #f0f2f5; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        :root { --primary: #007bff; --success: #28a745; --bg: #f0f2f5; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg); height: 100vh; overflow: hidden; }
         
-        /* Cabeçalho e Menu */
-        .header { padding: 20px; text-align: center; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .menu { padding: 15px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
+        .container { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
         
-        /* Itens de Configuração com Switch */
-        .config-box { 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: #fff; padding: 15px; border-radius: 12px; 
+        /* Botões de Configuração (Toggles Simplificados) */
+        .config-btn { 
+            padding: 15px; border-radius: 12px; border: 2px solid #ccc;
+            background: white; cursor: pointer; font-weight: bold;
+            display: flex; justify-content: center; align-items: center; /* Centralizado sem texto ON/OFF */
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .config-btn.active { 
+            border-color: var(--success); 
+            color: var(--success); 
+            background: #eaffea; 
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.2);
         }
 
-        /* Botões Principais */
-        .btn { 
-            padding: 16px; font-size: 16px; font-weight: bold; border: none; 
-            border-radius: 12px; cursor: pointer; color: white; width: 100%;
+        /* Botões de Ação */
+        .btn-acao { 
+            padding: 18px; font-size: 16px; font-weight: bold; border: none; 
+            border-radius: 12px; cursor: pointer; color: white; transition: opacity 0.2s;
         }
-        .btn-colar { background: #28a745; margin-top: 10px; }
-        .btn-salvar { background: #007bff; }
+        .btn-colar { background: var(--success); }
+        .btn-salvar { background: var(--primary); }
         .btn-share { background: #6f42c1; }
+        .btn-acao:active { opacity: 0.8; }
 
-        /* Viewer e Iframe */
+        /* Viewer Fullscreen */
         #viewer-container { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: white; display: none; z-index: 998; 
         }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* Botão Flutuante (Arrastável) */
+        /* Botão Flutuante Móvel (Sempre Olho) */
         #dragBtn { 
             position: fixed; bottom: 30px; right: 30px; 
-            width: 60px; height: 60px; background: #007bff; 
+            width: 65px; height: 65px; background: var(--primary); 
             color: white; border-radius: 50%; display: flex; 
-            align-items: center; justify-content: center; font-size: 24px;
-            z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            touch-action: none; 
+            align-items: center; justify-content: center; font-size: 28px;
+            z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            touch-action: none; user-select: none;
+            transition: transform 0.2s;
         }
+        #dragBtn:active { transform: scale(0.95); }
 
-        /* Botão de fechar (X) */
-        #btnClose { 
-            position: fixed; top: 15px; right: 15px; width: 40px; height: 40px; 
-            background: rgba(255,0,0,0.7); color: white; border: none; 
-            border-radius: 50%; z-index: 1001; display: none; font-weight: bold;
-        }
-
-        /* Toast (Avisos) */
+        /* Toast de Notificação */
         #toast { 
             position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; 
-            border-radius: 25px; display: none; z-index: 1002; font-size: 14px;
+            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; 
+            border-radius: 30px; display: none; z-index: 1002; font-size: 14px; text-align: center;
         }
 
-        textarea { display: none; } /* Oculto conforme pedido */
+        textarea { display: none; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h2 style="margin:0;">HTML Viewer</h2>
-</div>
-
-<div class="menu">
-    <div class="config-box">
-        <span>Auto-Abrir ao Colar</span>
-        <input type="checkbox" id="autoAbrir">
-    </div>
-    <div class="config-box">
-        <span>Ocultar botão X (Gesto)</span>
-        <input type="checkbox" id="modoGesto">
+<div class="container">
+    <h2>HTML Viewer</h2>
+    
+    <div id="btnAuto" class="config-btn" onclick="toggleCfg('auto')">
+        Auto-Abrir ao Colar
     </div>
 
-    <button class="btn btn-colar" onclick="acaoColar()">COLAR CÓDIGO</button>
-    <button class="btn btn-salvar" onclick="exportar('salvar')">SALVAR ARQUIVO</button>
-    <button class="btn btn-share" onclick="exportar('compartilhar')">COMPARTILHAR</button>
+    <div id="btnGesto" class="config-btn" onclick="toggleCfg('gesto')">
+        Modo Gesto / Ocultar Botão
+    </div>
+
+    <button class="btn-acao btn-colar" onclick="executarColar()">COLAR CÓDIGO</button>
+    <button class="btn-acao btn-salvar" onclick="gerarArquivo('salvar')">SALVAR .HTML</button>
+    <button class="btn-acao btn-share" onclick="gerarArquivo('share')">COMPARTILHAR</button>
 </div>
 
-<textarea id="dbConteudo"></textarea>
-<div id="viewer-container"><iframe id="meuIframe"></iframe></div>
-<button id="btnClose" onclick="fecharJanela()">X</button>
+<textarea id="hiddenStorage"></textarea>
+<div id="viewer-container"><iframe id="contentFrame"></iframe></div>
 <div id="dragBtn">👁️</div>
 <div id="toast"></div>
 
 <script>
-    const db = document.getElementById('dbConteudo');
-    const iframe = document.getElementById('meuIframe');
-    const container = document.getElementById('viewer-container');
-    const btnX = document.getElementById('btnClose');
+    const storage = document.getElementById('hiddenStorage');
+    const frame = document.getElementById('contentFrame');
+    const vContainer = document.getElementById('viewer-container');
     const dragBtn = document.getElementById('dragBtn');
-    const toast = document.getElementById('toast');
     
-    // Configurações e Memória
-    const optAuto = document.getElementById('autoAbrir');
-    const optGesto = document.getElementById('modoGesto');
+    // Carregar Configurações Salvas
+    let cfg = {
+        auto: localStorage.getItem('cfg_auto') === 'true',
+        gesto: localStorage.getItem('cfg_gesto') === 'true'
+    };
 
-    optAuto.checked = localStorage.getItem('cfg_auto') === 'true';
-    optGesto.checked = localStorage.getItem('cfg_gesto') === 'true';
+    function atualizarInterface() {
+        // Apenas adiciona/remove a classe .active (mudança de cor)
+        document.getElementById('btnAuto').className = cfg.auto ? 'config-btn active' : 'config-btn';
+        document.getElementById('btnGesto').className = cfg.gesto ? 'config-btn active' : 'config-btn';
+        
+        // Se o Modo Gesto estiver ativo, podemos ocultar o botão (opcional, conforme sua preferência)
+        // Por enquanto, mantive o botão visível pois ele é o único controle de sair.
+    }
+    atualizarInterface();
 
-    optAuto.onchange = () => localStorage.setItem('cfg_auto', optAuto.checked);
-    optGesto.onchange = () => localStorage.setItem('cfg_gesto', optGesto.checked);
-
-    function notify(msg) {
-        toast.innerText = msg;
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
+    function toggleCfg(tipo) {
+        cfg[tipo] = !cfg[tipo];
+        localStorage.setItem('cfg_'+tipo, cfg[tipo]);
+        atualizarInterface();
+        avisar(cfg[tipo] ? "Ativado" : "Desativado");
     }
 
-    async function acaoColar() {
+    function avisar(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
+    }
+
+    async function executarColar() {
         try {
-            const texto = await navigator.clipboard.readText();
-            db.value = texto;
-            notify("Conteúdo Colado!");
-            if(optAuto.checked) abrirJanela();
-        } catch (e) { notify("Erro ao acessar área de transferência."); }
+            const txt = await navigator.clipboard.readText();
+            storage.value = txt;
+            avisar("Conteúdo Colado!");
+            if(cfg.auto) alternarVisualizacao(true);
+        } catch(e) { avisar("Erro ao ler área de transferência."); }
     }
 
-    function abrirJanela() {
-        if(!db.value) return notify("Nada para exibir.");
-        iframe.srcdoc = db.value;
-        container.style.display = 'block';
-        if(!optGesto.checked) btnX.style.display = 'block';
+    function alternarVisualizacao(forcarAbrir = null) {
+        const estaAberto = vContainer.style.display === 'block';
+        // Se forcarAbrir for null, inverte o estado atual (toggle)
+        const novoEstado = forcarAbrir !== null ? forcarAbrir : !estaAberto;
+
+        if(novoEstado) {
+            // ABRIR
+            if(!storage.value) return avisar("Cole um código primeiro!");
+            frame.srcdoc = storage.value;
+            vContainer.style.display = 'block';
+            // Adiciona estado ao histórico para permitir o botão "Voltar" do celular
+            history.pushState({viewer: true}, "Viewer", "#viewer");
+        } else {
+            // FECHAR/SAIR
+            vContainer.style.display = 'none';
+            frame.srcdoc = ""; // Limpa para economizar memória
+            // Se tiver histórico de viewer, volta atrás para não quebrar a navegação
+            if(history.state && history.state.viewer) history.back();
+        }
+        // O botão continua sendo '👁️' visualmente
     }
 
-    function fecharJanela() {
-        container.style.display = 'none';
-        btnX.style.display = 'none';
-    }
+    // Atalhos: Tecla ESC e Botão Voltar do Navegador (Gesto do Celular)
+    window.addEventListener('keydown', (e) => { 
+        if(e.key === "Escape" && vContainer.style.display === 'block') alternarVisualizacao(false); 
+    });
 
-    // Lógica do Botão Móvel (Segurar para mover)
-    let holdTimer;
-    let movendo = false;
+    window.addEventListener('popstate', (e) => {
+        // Se o usuário usar o gesto de voltar do celular, fecha o viewer
+        if(vContainer.style.display === 'block') {
+            vContainer.style.display = 'none';
+        }
+    });
+
+    // Lógica do Botão Flutuante (Arrastar e Clicar)
+    let holdTimer, movendo = false;
+    let startX, startY;
 
     dragBtn.addEventListener('touchstart', (e) => {
-        holdTimer = setTimeout(() => { movendo = true; notify("Modo mover ativado"); }, 600);
-    });
+        let t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        holdTimer = setTimeout(() => { movendo = true; dragBtn.style.opacity = '0.7'; }, 200);
+    }, {passive: false});
 
     dragBtn.addEventListener('touchmove', (e) => {
         if(!movendo) return;
+        e.preventDefault(); // Evita scroll enquanto arrasta
         let t = e.touches[0];
-        dragBtn.style.left = (t.clientX - 30) + 'px';
-        dragBtn.style.top = (t.clientY - 30) + 'px';
-    });
+        dragBtn.style.left = (t.clientX - 32) + 'px';
+        dragBtn.style.top = (t.clientY - 32) + 'px';
+        dragBtn.style.bottom = 'auto'; dragBtn.style.right = 'auto';
+    }, {passive: false});
 
     dragBtn.addEventListener('touchend', () => {
         clearTimeout(holdTimer);
-        if(!movendo) abrirJanela();
+        dragBtn.style.opacity = '1';
+        if(!movendo) {
+            // Clique simples: Alterna visualização (Abre ou Sai)
+            alternarVisualizacao(); 
+        }
         movendo = false;
     });
+    
+    // Suporte a clique de mouse (Desktop)
+    dragBtn.addEventListener('click', () => {
+        // Apenas se não for touch (para evitar duplo disparo em alguns devices)
+        if ('ontouchstart' in window) return;
+        alternarVisualizacao();
+    });
 
-    function exportar(tipo) {
-        const codigo = db.value;
-        if(!codigo) return notify("Vazio!");
-
-        // Busca <title> no código
-        const match = codigo.match(/<title>(.*?)<\/title>/i);
-        const nomeArquivo = (match && match[1]) ? match[1].trim() : "arquivo_1";
+    function gerarArquivo(modo) {
+        const cod = storage.value;
+        if(!cod) return avisar("Sem conteúdo!");
         
-        const blob = new Blob([codigo], { type: 'text/html' });
+        const buscaTitulo = cod.match(/<title>(.*?)<\/title>/i);
+        const nomeFinal = buscaTitulo ? buscaTitulo[1].trim() : "arquivo_html";
+        
+        const blob = new Blob([cod], {type:'text/html'});
 
-        if(tipo === 'salvar') {
+        if(modo === 'salvar') {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `${nomeArquivo}.html`;
+            link.download = nomeFinal + ".html";
             link.click();
-            notify("Download iniciado!");
+            avisar("Arquivo baixado!");
         } else {
-            const f = new File([blob], `${nomeArquivo}.html`, { type: 'text/html' });
+            const file = new File([blob], nomeFinal + ".html", {type:'text/html'});
             if(navigator.share) {
-                navigator.share({ files: [f], title: nomeArquivo }).catch(() => {});
-            } else { notify("Compartilhamento não suportado."); }
+                navigator.share({files:[file], title: nomeFinal});
+            } else { avisar("Erro no compartilhamento."); }
         }
     }
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>
 </html>
