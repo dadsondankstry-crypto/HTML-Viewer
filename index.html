@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HTML Viewer</title>
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <style>
         :root { --primary: #007bff; --success: #28a745; --bg: #f0f2f5; }
         body { font-family: sans-serif; margin: 0; background: var(--bg); height: 100vh; overflow: hidden; }
@@ -12,11 +14,10 @@
         .container { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         h2 { text-align: center; color: #333; margin-bottom: 20px; }
         
-        /* Botões de Configuração (Toggles Simplificados) */
         .config-btn { 
             padding: 15px; border-radius: 12px; border: 2px solid #ccc;
             background: white; cursor: pointer; font-weight: bold;
-            display: flex; justify-content: center; align-items: center; /* Centralizado sem texto ON/OFF */
+            display: flex; justify-content: center; align-items: center;
             transition: all 0.3s ease;
             text-align: center;
         }
@@ -27,7 +28,6 @@
             box-shadow: 0 0 8px rgba(40, 167, 69, 0.2);
         }
 
-        /* Botões de Ação */
         .btn-acao { 
             padding: 18px; font-size: 16px; font-weight: bold; border: none; 
             border-radius: 12px; cursor: pointer; color: white; transition: opacity 0.2s;
@@ -37,28 +37,14 @@
         .btn-share { background: #6f42c1; }
         .btn-acao:active { opacity: 0.8; }
 
-        /* Viewer Fullscreen */
         #viewer-container { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: white; display: none; z-index: 998; 
         }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* Botão Flutuante Móvel (Sempre Olho) */
-        #dragBtn { 
-            position: fixed; bottom: 30px; right: 30px; 
-            width: 65px; height: 65px; background: var(--primary); 
-            color: white; border-radius: 50%; display: flex; 
-            align-items: center; justify-content: center; font-size: 28px;
-            z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            touch-action: none; user-select: none;
-            transition: transform 0.2s;
-        }
-        #dragBtn:active { transform: scale(0.95); }
-
-        /* Toast de Notificação */
         #toast { 
-            position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; 
             border-radius: 30px; display: none; z-index: 1002; font-size: 14px; text-align: center;
         }
@@ -75,10 +61,6 @@
         Auto-Abrir ao Colar
     </div>
 
-    <div id="btnGesto" class="config-btn" onclick="toggleCfg('gesto')">
-        Modo Gesto / Ocultar Botão
-    </div>
-
     <button class="btn-acao btn-colar" onclick="executarColar()">COLAR CÓDIGO</button>
     <button class="btn-acao btn-salvar" onclick="gerarArquivo('salvar')">SALVAR .HTML</button>
     <button class="btn-acao btn-share" onclick="gerarArquivo('share')">COMPARTILHAR</button>
@@ -86,28 +68,19 @@
 
 <textarea id="hiddenStorage"></textarea>
 <div id="viewer-container"><iframe id="contentFrame"></iframe></div>
-<div id="dragBtn">👁️</div>
 <div id="toast"></div>
 
 <script>
     const storage = document.getElementById('hiddenStorage');
     const frame = document.getElementById('contentFrame');
     const vContainer = document.getElementById('viewer-container');
-    const dragBtn = document.getElementById('dragBtn');
     
-    // Carregar Configurações Salvas
     let cfg = {
-        auto: localStorage.getItem('cfg_auto') === 'true',
-        gesto: localStorage.getItem('cfg_gesto') === 'true'
+        auto: localStorage.getItem('cfg_auto') === 'true'
     };
 
     function atualizarInterface() {
-        // Apenas adiciona/remove a classe .active (mudança de cor)
         document.getElementById('btnAuto').className = cfg.auto ? 'config-btn active' : 'config-btn';
-        document.getElementById('btnGesto').className = cfg.gesto ? 'config-btn active' : 'config-btn';
-        
-        // Se o Modo Gesto estiver ativo, podemos ocultar o botão (opcional, conforme sua preferência)
-        // Por enquanto, mantive o botão visível pois ele é o único controle de sair.
     }
     atualizarInterface();
 
@@ -135,73 +108,31 @@
 
     function alternarVisualizacao(forcarAbrir = null) {
         const estaAberto = vContainer.style.display === 'block';
-        // Se forcarAbrir for null, inverte o estado atual (toggle)
         const novoEstado = forcarAbrir !== null ? forcarAbrir : !estaAberto;
 
         if(novoEstado) {
-            // ABRIR
             if(!storage.value) return avisar("Cole um código primeiro!");
             frame.srcdoc = storage.value;
             vContainer.style.display = 'block';
-            // Adiciona estado ao histórico para permitir o botão "Voltar" do celular
             history.pushState({viewer: true}, "Viewer", "#viewer");
         } else {
-            // FECHAR/SAIR
             vContainer.style.display = 'none';
-            frame.srcdoc = ""; // Limpa para economizar memória
-            // Se tiver histórico de viewer, volta atrás para não quebrar a navegação
+            frame.srcdoc = ""; 
             if(history.state && history.state.viewer) history.back();
         }
-        // O botão continua sendo '👁️' visualmente
     }
 
-    // Atalhos: Tecla ESC e Botão Voltar do Navegador (Gesto do Celular)
     window.addEventListener('keydown', (e) => { 
-        if(e.key === "Escape" && vContainer.style.display === 'block') alternarVisualizacao(false); 
+        if(e.key === "Escape" && vContainer.style.display === 'block') {
+            alternarVisualizacao(false);
+        }
     });
 
     window.addEventListener('popstate', (e) => {
-        // Se o usuário usar o gesto de voltar do celular, fecha o viewer
         if(vContainer.style.display === 'block') {
             vContainer.style.display = 'none';
+            frame.srcdoc = "";
         }
-    });
-
-    // Lógica do Botão Flutuante (Arrastar e Clicar)
-    let holdTimer, movendo = false;
-    let startX, startY;
-
-    dragBtn.addEventListener('touchstart', (e) => {
-        let t = e.touches[0];
-        startX = t.clientX;
-        startY = t.clientY;
-        holdTimer = setTimeout(() => { movendo = true; dragBtn.style.opacity = '0.7'; }, 200);
-    }, {passive: false});
-
-    dragBtn.addEventListener('touchmove', (e) => {
-        if(!movendo) return;
-        e.preventDefault(); // Evita scroll enquanto arrasta
-        let t = e.touches[0];
-        dragBtn.style.left = (t.clientX - 32) + 'px';
-        dragBtn.style.top = (t.clientY - 32) + 'px';
-        dragBtn.style.bottom = 'auto'; dragBtn.style.right = 'auto';
-    }, {passive: false});
-
-    dragBtn.addEventListener('touchend', () => {
-        clearTimeout(holdTimer);
-        dragBtn.style.opacity = '1';
-        if(!movendo) {
-            // Clique simples: Alterna visualização (Abre ou Sai)
-            alternarVisualizacao(); 
-        }
-        movendo = false;
-    });
-    
-    // Suporte a clique de mouse (Desktop)
-    dragBtn.addEventListener('click', () => {
-        // Apenas se não for touch (para evitar duplo disparo em alguns devices)
-        if ('ontouchstart' in window) return;
-        alternarVisualizacao();
     });
 
     function gerarArquivo(modo) {
@@ -227,7 +158,14 @@
         }
     }
 
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    // Registro do Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registrado', reg))
+                .catch(err => console.log('Erro no SW', err));
+        });
+    }
 </script>
 </body>
 </html>
